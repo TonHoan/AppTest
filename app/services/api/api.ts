@@ -39,17 +39,17 @@ export class Api {
       baseURL: this.config.url,
       timeout: this.config.timeout,
       headers: {
-        Accept: "application/json",
+        Accept: "application/vnd.github.v3+json",
       },
     })
   }
 
-  /**
-   * Gets a list of users.
-   */
-  async getUsers(): Promise<Types.GetUsersResult> {
+  async searchUser(username): Promise<Types.SearchUserResult> {
     // make the api call
-    const response: ApiResponse<any> = await this.apisauce.get(`/users`)
+    const response: ApiResponse<any> = await this.apisauce.get(`/search/users`, {
+      q: username,
+      per_page: 10,
+    })
 
     // the typical ways to die when calling an api
     if (!response.ok) {
@@ -57,30 +57,19 @@ export class Api {
       if (problem) return problem
     }
 
-    const convertUser = raw => {
-      return {
-        id: raw.id,
-        name: raw.name,
-      }
-    }
-
     // transform the data into the format we are expecting
     try {
-      const rawUsers = response.data
-      const resultUsers: Types.User[] = rawUsers.map(convertUser)
-      return { kind: "ok", users: resultUsers }
+      return { kind: "ok", data: response.data }
     } catch {
       return { kind: "bad-data" }
     }
   }
-
-  /**
-   * Gets a single user by ID
-   */
-
-  async getUser(id: string): Promise<Types.GetUserResult> {
+  async getUserRepos(username, page, perPage): Promise<Types.GethUserReposResult> {
     // make the api call
-    const response: ApiResponse<any> = await this.apisauce.get(`/users/${id}`)
+    const response: ApiResponse<any> = await this.apisauce.get(`/users/${username}/repos`, {
+      page,
+      per_page: perPage,
+    })
 
     // the typical ways to die when calling an api
     if (!response.ok) {
@@ -90,11 +79,31 @@ export class Api {
 
     // transform the data into the format we are expecting
     try {
-      const resultUser: Types.User = {
-        id: response.data.id,
-        name: response.data.name,
-      }
-      return { kind: "ok", user: resultUser }
+      return { kind: "ok", data: response.data }
+    } catch {
+      return { kind: "bad-data" }
+    }
+  }
+  async getStargazers(username, name, page, perPage): Promise<Types.GetStargazersResult> {
+    // make the api call
+    const response: ApiResponse<any> = await this.apisauce.get(
+      `/repos/${username}/${name}/stargazers`,
+      {
+        page,
+        per_page: perPage,
+      },
+    )
+    console.log(response)
+
+    // the typical ways to die when calling an api
+    if (!response.ok) {
+      const problem = getGeneralApiProblem(response)
+      if (problem) return problem
+    }
+
+    // transform the data into the format we are expecting
+    try {
+      return { kind: "ok", data: response.data }
     } catch {
       return { kind: "bad-data" }
     }
